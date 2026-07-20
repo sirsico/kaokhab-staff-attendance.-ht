@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAOKHAB · Staff Attendance Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14201C;
+    --ink-2:#1B2820;
+    --parchment:#F4ECD8;
+    --chalk:#E9E3D2;
+    --marigold:#D9A441;
+    --marigold-dim:#B78933;
+    --sage:#6B8072;
+    --rust:#B5502E;
+    --line: rgba(233,227,210,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top, #1c2b23 0%, var(--ink) 55%),
+      var(--ink);
+    color:var(--chalk);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:32px 18px 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+
+  /* ---------- Header / School Identity ---------- */
+  .school-card{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px 26px 22px;
+    background:linear-gradient(180deg, rgba(233,227,210,0.03), transparent);
+    position:relative;
+    margin-bottom:34px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+    color:var(--marigold);
+    margin-bottom:10px;
+  }
+  .school-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(28px, 6vw, 40px);
+    line-height:1.1;
+    margin:0 0 6px;
+    color:var(--parchment);
+  }
+  .school-location{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--sage);
+    letter-spacing:0.3px;
+  }
+  .edit-btn{
+    position:absolute;
+    top:22px; right:22px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--chalk);
+    border-radius:8px;
+    padding:7px 12px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:border-color .2s, color .2s;
+  }
+  .edit-btn:hover{border-color:var(--marigold); color:var(--marigold);}
+  .edit-fields{display:none; margin-top:16px;}
+  .edit-fields.show{display:block;}
+  .edit-fields label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--sage);
+    margin:12px 0 5px;
+  }
+  .edit-fields input{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:11px 12px;
+    color:var(--parchment);
+    font-family:'Fraunces', serif;
+    font-size:16px;
+  }
+  .edit-fields input:focus{outline:none; border-color:var(--marigold);}
+  .edit-actions{display:flex; gap:10px; margin-top:16px;}
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    padding:10px 18px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--chalk);
+    cursor:pointer;
+    transition:all .2s;
+  }
+  .btn-gold{background:var(--marigold); border-color:var(--marigold); color:var(--ink); font-weight:600;}
+  .btn-gold:hover{background:var(--marigold-dim);}
+  .btn:hover{border-color:var(--chalk);}
+
+  /* ---------- The Gate (signature element) ---------- */
+  .gate-stage{
+    display:flex;
+    justify-content:center;
+    margin: 8px 0 26px;
+  }
+  .gate{
+    width:220px;
+    height:130px;
+    position:relative;
+    perspective:600px;
+  }
+  .gate-post{
+    position:absolute; top:0; bottom:0;
+    width:8px;
+    background:linear-gradient(180deg, var(--marigold), var(--marigold-dim));
+    border-radius:2px;
+  }
+  .gate-post.left{left:0;}
+  .gate-post.right{right:0;}
+  .gate-door{
+    position:absolute;
+    top:6px; bottom:6px;
+    width:96px;
+    background:repeating-linear-gradient(90deg, rgba(233,227,210,0.09) 0 2px, transparent 2px 14px), var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:3px;
+    transform-origin:left center;
+    transition:transform .6s cubic-bezier(.4,0,.2,1);
+  }
+  .gate-door.left{left:8px; transform-origin:left center;}
+  .gate-door.right{right:8px; transform-origin:right center;}
+  .gate.closed .gate-door.left{transform:rotateY(0deg);}
+  .gate.closed .gate-door.right{transform:rotateY(0deg);}
+  .gate.open .gate-door.left{transform:rotateY(-62deg);}
+  .gate.open .gate-door.right{transform:rotateY(62deg);}
+  .gate-status{
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--sage);
+    margin-top:10px;
+  }
+  .gate-status.on b{color:var(--marigold);}
+  .gate-status.off b{color:var(--rust);}
+
+  /* ---------- Clock ---------- */
+  .clock{
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    color:var(--sage);
+    margin-bottom:22px;
+  }
+  .clock span{color:var(--parchment); font-size:16px;}
+
+  /* ---------- Sign In / Out Panel ---------- */
+  .panel{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:24px 22px;
+    margin-bottom:30px;
+    background:linear-gradient(180deg, rgba(233,227,210,0.025), transparent);
+  }
+  .panel h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0 0 16px;
+    color:var(--parchment);
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--sage);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px 13px;
+    color:var(--parchment);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--marigold);}
+  .status-line{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--sage);
+    margin:4px 0 16px;
+    min-height:16px;
+  }
+  .status-line.in{color:var(--marigold);}
+  .status-line.out{color:var(--rust);}
+  .big-btn{
+    width:100%;
+    padding:16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    font-weight:600;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    transition:transform .12s, background .2s;
+  }
+  .big-btn:active{transform:scale(0.98);}
+  .big-btn.signin{background:var(--marigold); color:var(--ink);}
+  .big-btn.signin:hover{background:var(--marigold-dim);}
+  .big-btn.signout{background:var(--rust); color:var(--parchment);}
+  .big-btn.signout:hover{background:#993f22;}
+  .big-btn:disabled{background:var(--ink-2); color:var(--sage); cursor:not-allowed;}
+
+  /* ---------- Register ---------- */
+  .register h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0 0 4px;
+    color:var(--parchment);
+  }
+  .register-sub{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--sage);
+    margin-bottom:16px;
+  }
+  .entry{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:4px 12px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+    animation: chalk-in .35s ease;
+  }
+  @keyframes chalk-in{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:translateY(0);} }
+  .entry:last-child{border-bottom:none;}
+  .entry-name{
+    font-family:'Fraunces', serif;
+    font-size:16px;
+    color:var(--parchment);
+  }
+  .entry-role{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--sage);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .entry-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border-radius:20px;
+    height:fit-content;
+    align-self:center;
+  }
+  .entry-badge.in{background:rgba(217,164,65,0.15); color:var(--marigold); border:1px solid rgba(217,164,65,0.4);}
+  .entry-badge.out{background:rgba(181,80,46,0.15); color:var(--rust); border:1px solid rgba(181,80,46,0.4);}
+  .entry-times{
+    grid-column:1 / -1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--sage);
+    display:flex;
+    gap:16px;
+  }
+  .empty-state{
+    text-align:center;
+    padding:30px 10px;
+    color:var(--sage);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.5px;
+  }
+
+  /* ---------- Admin ---------- */
+  .admin-toggle{
+    text-align:center;
+    margin:40px 0 0;
+  }
+  .admin-toggle button{
+    background:none;
+    border:none;
+    color:var(--sage);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .admin-panel{
+    display:none;
+    margin-top:20px;
+  }
+  .admin-panel.show{display:block;}
+  .admin-gate{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px;
+    text-align:center;
+  }
+  .pass-wrap{position:relative; margin-bottom:12px;}
+  .admin-gate input{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px 42px 12px 12px;
+    color:var(--parchment);
+    font-family:'IBM Plex Mono', monospace;
+    text-align:center;
+    letter-spacing:2px;
+    margin-bottom:0;
+  }
+  .pass-toggle{
+    position:absolute;
+    right:8px; top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:6px;
+    color:var(--sage);
+    display:flex;
+    align-items:center;
+  }
+  .pass-toggle:hover{color:var(--marigold);}
+  .pass-toggle svg{width:18px; height:18px;}
+  .admin-error{color:var(--rust); font-family:'IBM Plex Mono', monospace; font-size:11px; min-height:14px; margin-bottom:8px;}
+  .admin-dash{border:1px solid var(--line); border-radius:14px; padding:22px;}
+  .admin-dash h2{font-family:'Fraunces', serif; font-size:19px; margin:0 0 14px; color:var(--parchment);}
+  .filter-row{display:flex; gap:10px; margin-bottom:16px;}
+  .filter-row input{
+    flex:1;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    color:var(--parchment);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+  }
+  .admin-row{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    gap:8px;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    align-items:center;
+  }
+  .admin-row .name{font-family:'Fraunces', serif; font-size:14.5px; color:var(--parchment);}
+  .admin-row .del{
+    background:none; border:none; color:var(--rust); cursor:pointer; font-size:11px;
+    letter-spacing:1px; text-transform:uppercase;
+  }
+  .export-row{margin-top:16px; display:flex; gap:10px;}
+  .loading{text-align:center; color:var(--sage); font-family:'IBM Plex Mono', monospace; font-size:12px; padding:20px;}
+
+  .gps-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-top:14px; padding-top:14px; border-top:1px solid var(--line);
+  }
+  .gps-status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:0.5px; color:var(--sage);
+  }
+  .gps-status.pinned{color:var(--marigold);}
+
+  .flag-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px; letter-spacing:0.5px; text-transform:uppercase;
+    color:var(--rust); border:1px solid rgba(181,80,46,0.4);
+    background:rgba(181,80,46,0.12);
+    padding:2px 6px; border-radius:10px; margin-left:6px;
+  }
+
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(10,15,12,0.72);
+    z-index:50;
+    align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--ink);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:26px 22px;
+    max-width:340px;
+    width:100%;
+    text-align:center;
+  }
+  .modal-box h3{
+    font-family:'Fraunces', serif; font-size:19px; margin:0 0 10px; color:var(--parchment);
+  }
+  .modal-box p{
+    font-family:'IBM Plex Sans', sans-serif; font-size:13.5px; color:var(--sage);
+    line-height:1.5; margin:0 0 18px;
+  }
+  .modal-actions{display:flex; gap:10px;}
+  .modal-actions .btn{flex:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SCHOOL IDENTITY -->
+  <div class="school-card">
+    <button class="edit-btn" id="editToggle">EDIT</button>
+    <div class="eyebrow">KAOKHAB · Staff Attendance Gate</div>
+    <h1 class="school-name" id="schoolNameDisplay">Loading…</h1>
+    <div class="school-location" id="schoolLocationDisplay"></div>
+
+    <div class="edit-fields" id="editFields">
+      <label>School Name</label>
+      <input type="text" id="schoolNameInput" placeholder="e.g. Al-Furqan Model College">
+      <label>Location</label>
+      <input type="text" id="schoolLocationInput" placeholder="e.g. Ilorin, Kwara State">
+      <div class="edit-actions">
+        <button class="btn btn-gold" id="saveSchool">Save</button>
+        <button class="btn" id="cancelSchool">Cancel</button>
+      </div>
+      <div class="gps-row">
+        <button class="btn" id="pinGps">Pin School GPS (stand at school, then tap)</button>
+        <span id="gpsStatus" class="gps-status">Not pinned</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="clock">Today is <span id="todayDate">—</span> · <span id="liveTime">--:--:--</span></div>
+
+  <div class="gate-stage">
+    <div class="gate closed" id="gateVisual">
+      <div class="gate-post left"></div>
+      <div class="gate-post right"></div>
+      <div class="gate-door left"></div>
+      <div class="gate-door right"></div>
+    </div>
+  </div>
+
+  <!-- SIGN IN / OUT PANEL -->
+  <div class="panel">
+    <h2>Clock In / Clock Out</h2>
+    <div class="field">
+      <label>Staff Name</label>
+      <input type="text" id="staffName" list="staffList" placeholder="Type your full name" autocomplete="off">
+      <datalist id="staffList"></datalist>
+    </div>
+    <div class="field">
+      <label>Role / Department (optional)</label>
+      <input type="text" id="staffRole" placeholder="e.g. Mathematics Dept.">
+    </div>
+    <div class="status-line" id="statusLine"></div>
+    <button class="big-btn signin" id="actionBtn" disabled>Enter Name to Continue</button>
+  </div>
+
+  <!-- TODAY'S REGISTER -->
+  <div class="panel register">
+    <h2>Today's Register</h2>
+    <div class="register-sub" id="registerCount">0 entries</div>
+    <div id="registerList"><div class="empty-state">No one has signed in yet today.</div></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="admin-toggle"><button id="adminToggleBtn">Examiner / Admin Access</button></div>
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-gate" id="adminGate">
+      <div class="eyebrow" style="margin-bottom:14px;">PASSCODE REQUIRED</div>
+      <div class="pass-wrap">
+        <input type="password" id="adminPass" placeholder="ENTER PASSCODE">
+        <button type="button" class="pass-toggle" id="passToggle" aria-label="Show passcode">
+          <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
+      <div class="admin-error" id="adminError"></div>
+      <button class="btn btn-gold" id="adminUnlock" style="width:100%;">Unlock Dashboard</button>
+    </div>
+    <div class="admin-dash" id="adminDash" style="display:none;">
+      <h2>Attendance Ledger</h2>
+      <div class="filter-row">
+        <input type="date" id="filterDate">
+        <input type="text" id="filterName" placeholder="Filter by name…">
+      </div>
+      <div id="adminList" class="loading">Loading records…</div>
+      <div class="export-row">
+        <button class="btn" id="exportCsv">Export CSV</button>
+        <button class="btn" id="adminLock">Lock Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="locationModal">
+  <div class="modal-box">
+    <h3 id="modalTitle">You seem far from school</h3>
+    <p id="modalMessage"></p>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn btn-gold" id="modalContinue">Sign In Anyway</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSCODE = "KAOKHAB-STAFF";
+
+// Local, fully-offline storage — works standalone in any browser (no Claude runtime needed).
+const storage = {
+  async get(key){
+    const raw = localStorage.getItem('kaokhab_' + key);
+    if(raw === null) throw new Error('not found');
+    return { key, value: raw };
+  },
+  async set(key, value){
+    localStorage.setItem('kaokhab_' + key, value);
+    return { key, value };
+  },
+  async delete(key){
+    localStorage.removeItem('kaokhab_' + key);
+    return { key, deleted: true };
+  }
+};
+
+function todayKey(d){
+  const dt = d || new Date();
+  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), day = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDuration(inIso, outIso){
+  const ms = new Date(outIso) - new Date(inIso);
+  if(ms < 0) return '—';
+  const mins = Math.floor(ms/60000);
+  const h = Math.floor(mins/60), m = mins%60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ---------- Live clock ----------
+function tickClock(){
+  const now = new Date();
+  document.getElementById('liveTime').textContent = now.toLocaleTimeString();
+  document.getElementById('todayDate').textContent = now.toLocaleDateString([], {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ---------- School identity ----------
+let schoolInfo = {name:'Untitled School', location:'Location not set', lat:null, lng:null};
+const GEOFENCE_METERS = 400; // beyond this, flag as "away from school"
+
+function haversineMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function getPosition(){
+  return new Promise((resolve) => {
+    if(!window.isSecureContext){
+      resolve({error:'insecure', message:"Location needs a secure connection. Files opened directly (file://) or over plain http:// block GPS on most phones — host this page online with https, or open it through an app that serves it over https/localhost."});
+      return;
+    }
+    if(!navigator.geolocation){
+      resolve({error:'unsupported', message:"This browser doesn't support location access."});
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({lat: pos.coords.latitude, lng: pos.coords.longitude}),
+      err => {
+        let message = 'Could not get your location.';
+        if(err.code === 1) message = "Location permission was denied. Check your browser/app's location permission in phone settings and try again.";
+        else if(err.code === 2) message = "GPS signal unavailable right now. Try again outdoors or with a stronger signal.";
+        else if(err.code === 3) message = "Location request timed out. Try again.";
+        resolve({error:'denied', message});
+      },
+      {enableHighAccuracy:true, timeout:12000, maximumAge:15000}
+    );
+  });
+}
+function updateGpsStatus(){
+  const el = document.getElementById('gpsStatus');
+  if(schoolInfo.lat != null && schoolInfo.lng != null){
+    el.textContent = 'GPS pinned ✓';
+    el.classList.add('pinned');
+  } else {
+    el.textContent = 'Not pinned — sign-ins won\'t be location-checked';
+    el.classList.remove('pinned');
+  }
+}
+
+async function loadSchoolInfo(){
+  try{
+    const res = await storage.get('school-info');
+    schoolInfo = res ? JSON.parse(res.value) : schoolInfo;
+  }catch(e){ /* keep defaults */ }
+  document.getElementById('schoolNameDisplay').textContent = schoolInfo.name;
+  document.getElementById('schoolLocationDisplay').textContent = schoolInfo.location;
+  document.getElementById('schoolNameInput').value = schoolInfo.name;
+  document.getElementById('schoolLocationInput').value = schoolInfo.location;
+  updateGpsStatus();
+}
+document.getElementById('editToggle').addEventListener('click', ()=>{
+  document.getElementById('editFields').classList.toggle('show');
+});
+document.getElementById('cancelSchool').addEventListener('click', ()=>{
+  document.getElementById('editFields').classList.remove('show');
+  loadSchoolInfo();
+});
+document.getElementById('saveSchool').addEventListener('click', async ()=>{
+  const name = document.getElementById('schoolNameInput').value.trim() || 'Untitled School';
+  const location = document.getElementById('schoolLocationInput').value.trim() || 'Location not set';
+  schoolInfo = {...schoolInfo, name, location};
+  try{
+    await storage.set('school-info', JSON.stringify(schoolInfo));
+  }catch(e){ console.error('Save failed', e); }
+  document.getElementById('schoolNameDisplay').textContent = name;
+  document.getElementById('schoolLocationDisplay').textContent = location;
+  document.getElementById('editFields').classList.remove('show');
+});
+document.getElementById('pinGps').addEventListener('click', async ()=>{
+  const btn = document.getElementById('pinGps');
+  btn.disabled = true;
+  btn.textContent = 'Getting location…';
+  const pos = await getPosition();
+  btn.disabled = false;
+  btn.textContent = 'Pin School GPS (stand at school, then tap)';
+  if(!pos || pos.error){
+    document.getElementById('gpsStatus').textContent = pos && pos.message ? pos.message : 'Could not get location.';
+    return;
+  }
+  schoolInfo = {...schoolInfo, lat: pos.lat, lng: pos.lng};
+  try{ await storage.set('school-info', JSON.stringify(schoolInfo)); }catch(e){}
+  updateGpsStatus();
+});
+
+// ---------- Staff directory (autocomplete) ----------
+async function loadStaffDirectory(){
+  try{
+    const res = await storage.get('staff-directory');
+    const names = res ? JSON.parse(res.value) : [];
+    const dl = document.getElementById('staffList');
+    dl.innerHTML = names.map(n=>`<option value="${n}"></option>`).join('');
+    return names;
+  }catch(e){ return []; }
+}
+async function addToStaffDirectory(name){
+  const names = await loadStaffDirectory();
+  if(!names.includes(name)){
+    names.push(name);
+    try{ await storage.set('staff-directory', JSON.stringify(names)); }catch(e){}
+    await loadStaffDirectory();
+  }
+}
+
+// ---------- Attendance for today ----------
+let todaysEntries = [];
+
+async function loadToday(){
+  const key = `attendance:${todayKey()}`;
+  try{
+    const res = await storage.get(key);
+    todaysEntries = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    todaysEntries = [];
+  }
+  renderRegister();
+  refreshActionState();
+}
+async function saveToday(){
+  const key = `attendance:${todayKey()}`;
+  try{ await storage.set(key, JSON.stringify(todaysEntries)); }
+  catch(e){ console.error('Attendance save failed', e); }
+}
+
+function findOpenEntry(name){
+  return todaysEntries.find(e => e.name.toLowerCase() === name.toLowerCase() && !e.timeOut);
+}
+
+function renderRegister(){
+  const list = document.getElementById('registerList');
+  const count = document.getElementById('registerCount');
+  count.textContent = `${todaysEntries.length} ${todaysEntries.length === 1 ? 'entry' : 'entries'} today`;
+  if(todaysEntries.length === 0){
+    list.innerHTML = '<div class="empty-state">No one has signed in yet today.</div>';
+    return;
+  }
+  const sorted = [...todaysEntries].sort((a,b)=> new Date(b.timeIn) - new Date(a.timeIn));
+  list.innerHTML = sorted.map(e => `
+    <div class="entry">
+      <div>
+        <div class="entry-name">${e.name}</div>
+        ${e.role ? `<div class="entry-role">${e.role}</div>` : ''}
+      </div>
+      <div class="entry-badge ${e.timeOut ? 'out' : 'in'}">${e.timeOut ? 'Signed Out' : 'On Site'}${(e.inFlagged || e.outFlagged) ? '<span class="flag-badge">Away</span>' : ''}</div>
+      <div class="entry-times">
+        <span>In: ${fmtTime(e.timeIn)}</span>
+        ${e.timeOut ? `<span>Out: ${fmtTime(e.timeOut)}</span><span>${fmtDuration(e.timeIn, e.timeOut)}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function setGate(open){
+  const gate = document.getElementById('gateVisual');
+  gate.classList.toggle('open', open);
+  gate.classList.toggle('closed', !open);
+}
+
+function refreshActionState(){
+  const nameInput = document.getElementById('staffName').value.trim();
+  const btn = document.getElementById('actionBtn');
+  const statusLine = document.getElementById('statusLine');
+  if(!nameInput){
+    btn.disabled = true;
+    btn.textContent = 'Enter Name to Continue';
+    btn.className = 'big-btn signin';
+    statusLine.textContent = '';
+    statusLine.className = 'status-line';
+    setGate(false);
+    return;
+  }
+  const open = findOpenEntry(nameInput);
+  btn.disabled = false;
+  if(open){
+    btn.textContent = 'Clock Out';
+    btn.className = 'big-btn signout';
+    statusLine.textContent = `On site since ${fmtTime(open.timeIn)}`;
+    statusLine.classList.add('in');
+    setGate(true);
+  } else {
+    btn.textContent = 'Clock In';
+    btn.className = 'big-btn signin';
+    statusLine.textContent = 'Not currently signed in today.';
+    statusLine.className = 'status-line';
+    setGate(false);
+  }
+}
+
+document.getElementById('staffName').addEventListener('input', refreshActionState);
+
+function askModal(title, message, continueLabel){
+  return new Promise(resolve => {
+    const overlay = document.getElementById('locationModal');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').textContent = message;
+    document.getElementById('modalContinue').textContent = continueLabel || 'Continue Anyway';
+    overlay.classList.add('show');
+    const cleanup = (result) => {
+      overlay.classList.remove('show');
+      cancelBtn.removeEventListener('click', onCancel);
+      contBtn.removeEventListener('click', onContinue);
+      resolve(result);
+    };
+    const cancelBtn = document.getElementById('modalCancel');
+    const contBtn = document.getElementById('modalContinue');
+    const onCancel = () => cleanup(false);
+    const onContinue = () => cleanup(true);
+    cancelBtn.addEventListener('click', onCancel);
+    contBtn.addEventListener('click', onContinue);
+  });
+}
+
+document.getElementById('actionBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('staffName').value.trim();
+  const role = document.getElementById('staffRole').value.trim();
+  if(!name) return;
+  const open = findOpenEntry(name);
+  const action = open ? 'out' : 'in';
+  const btn = document.getElementById('actionBtn');
+
+  // Location check — only if school GPS has been pinned
+  let distanceMeters = null;
+  let flagged = false;
+  if(schoolInfo.lat != null && schoolInfo.lng != null){
+    btn.disabled = true;
+    const prevText = btn.textContent;
+    btn.textContent = 'Checking location…';
+    const pos = await getPosition();
+    btn.disabled = false;
+    btn.textContent = prevText;
+
+    if(pos && !pos.error){
+      distanceMeters = Math.round(haversineMeters(schoolInfo.lat, schoolInfo.lng, pos.lat, pos.lng));
+      if(distanceMeters > GEOFENCE_METERS){
+        flagged = true;
+        const km = (distanceMeters/1000).toFixed(1);
+        const proceed = await askModal(
+          'You seem far from school',
+          `You appear to be about ${km} km from ${schoolInfo.name}. If you're at home or on your way, please wait until you arrive. Continue signing ${action === 'in' ? 'in' : 'out'} anyway?`,
+          `Sign ${action === 'in' ? 'In' : 'Out'} Anyway`
+        );
+        if(!proceed) return;
+      }
+    } else {
+      const proceed = await askModal(
+        'Location unavailable',
+        (pos && pos.message ? pos.message : 'We couldn\'t confirm your location.') + ' Continue without a location check?',
+        'Continue'
+      );
+      if(!proceed) return;
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  if(open){
+    open.timeOut = nowIso;
+    open.outFlagged = flagged;
+    open.outDistanceM = distanceMeters;
+    setGate(false);
+  } else {
+    todaysEntries.push({ name, role, timeIn: nowIso, timeOut: null, inFlagged: flagged, inDistanceM: distanceMeters });
+    await addToStaffDirectory(name);
+    setGate(true);
+  }
+  await saveToday();
+  renderRegister();
+  refreshActionState();
+});
+
+// ---------- Admin dashboard ----------
+document.getElementById('adminToggleBtn').addEventListener('click', ()=>{
+  document.getElementById('adminPanel').classList.toggle('show');
+});
+document.getElementById('passToggle').addEventListener('click', ()=>{
+  const input = document.getElementById('adminPass');
+  const eye = document.getElementById('eyeIcon');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  eye.innerHTML = showing
+    ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+    : '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+});
+
+document.getElementById('adminUnlock').addEventListener('click', ()=>{
+  const val = document.getElementById('adminPass').value.trim();
+  const err = document.getElementById('adminError');
+  if(val === ADMIN_PASSCODE){
+    err.textContent = '';
+    document.getElementById('adminGate').style.display = 'none';
+    document.getElementById('adminDash').style.display = 'block';
+    document.getElementById('filterDate').value = todayKey();
+    loadAdminRecords();
+  } else {
+    err.textContent = 'Incorrect passcode.';
+  }
+});
+document.getElementById('adminLock').addEventListener('click', ()=>{
+  document.getElementById('adminDash').style.display = 'none';
+  document.getElementById('adminGate').style.display = 'block';
+  document.getElementById('adminPass').value = '';
+});
+
+let adminRecords = [];
+async function loadAdminRecords(){
+  const dateVal = document.getElementById('filterDate').value || todayKey();
+  const listEl = document.getElementById('adminList');
+  listEl.className = 'loading';
+  listEl.textContent = 'Loading records…';
+  try{
+    const res = await storage.get(`attendance:${dateVal}`);
+    adminRecords = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    adminRecords = [];
+  }
+  renderAdminList();
+}
+function renderAdminList(){
+  const listEl = document.getElementById('adminList');
+  const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
+  listEl.className = '';
+  let recs = adminRecords;
+  if(nameFilter) recs = recs.filter(r => r.name.toLowerCase().includes(nameFilter));
+  if(recs.length === 0){
+    listEl.innerHTML = '<div class="empty-state">No records for this date.</div>';
+    return;
+  }
+  listEl.innerHTML = recs.map((r, idx) => `
+    <div class="admin-row">
+      <div>
+        <div class="name">${r.name}</div>
+        <div style="color:var(--sage); font-size:10.5px;">${r.role || ''}</div>
+      </div>
+      <div>${fmtTime(r.timeIn)} → ${r.timeOut ? fmtTime(r.timeOut) : '—'}${(r.inFlagged || r.outFlagged) ? '<span class="flag-badge">Away</span>' : ''}</div>
+      <button class="del" data-idx="${idx}">Delete</button>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const i = parseInt(e.target.dataset.idx);
+      const dateVal = document.getElementById('filterDate').value || todayKey();
+      let full;
+      try{
+        const res = await storage.get(`attendance:${dateVal}`);
+        full = res ? JSON.parse(res.value) : [];
+      }catch(err){ full = []; }
+      const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
+      let filtered = full;
+      if(nameFilter) filtered = full.filter(r => r.name.toLowerCase().includes(nameFilter));
+      const target = filtered[i];
+      const realIdx = full.indexOf(target);
+      if(realIdx > -1){
+        full.splice(realIdx, 1);
+        try{ await storage.set(`attendance:${dateVal}`, JSON.stringify(full)); }catch(err){}
+        if(dateVal === todayKey()){ await loadToday(); }
+        await loadAdminRecords();
+      }
+    });
+  });
+}
+document.getElementById('filterDate').addEventListener('change', loadAdminRecords);
+document.getElementById('filterName').addEventListener('input', renderAdminList);
+document.getElementById('exportCsv').addEventListener('click', ()=>{
+  const dateVal = document.getElementById('filterDate').value || todayKey();
+  let csv = 'Name,Role,Time In,Time Out,Duration\n';
+  adminRecords.forEach(r=>{
+    csv += `"${r.name}","${r.role||''}","${fmtTime(r.timeIn)}","${r.timeOut ? fmtTime(r.timeOut) : ''}","${r.timeOut ? fmtDuration(r.timeIn, r.timeOut) : ''}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `attendance-${dateVal}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ---------- Init ----------
+loadSchoolInfo();
+loadStaffDirectory();
+loadToday();
+</script>
+</body>
+</html>
